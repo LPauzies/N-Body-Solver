@@ -1,0 +1,28 @@
+html, body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: black;
+}
+
+canvas {
+    touch-action: none;
+    border-color: white;
+    border-style: solid;
+}
+
+#graph3D {
+  float: left;
+  margin-left: 5%;
+  color: white;
+  font-size: large;
+}
+
+
+#graph2D {
+  margin-left: 55%;
+  font-size: large;
+  color: white;
+}

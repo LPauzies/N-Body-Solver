@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Nbody webGL</title>
+  <meta name="description" content="Nbody particle moving with a force." />
+
+  <!-- SCRIPTS DE BASE -->
+
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+
+
+  <!-- FEUILLES CSS -->
+
+  <link rel="stylesheet" type="text/css" href="../static/style.css" />
+
+</head>
+
+<body style="color:white;">
+
+  <div id="graph3D" class="js-plotly-plot" style="width:800px;height:600px;"></div>
+  <div id="graph2D" class="js-plotly-plot" style="width:800px;height:600px"></div>
+
+</body>
+
+<script>
+
+var x = [], y = [], z = [];
+
+data2D = [{
+  x: x,
+  y: y,
+  z: z,
+  mode: 'markers'
+}];
+
+layout2D =  {
+  xaxis: {range: [-10, 10]},
+  yaxis: {range: [-10, 10]}
+};
+
+
+var data=[
+    {
+     opacity:0.7,
+     type: 'scatter3d',
+     x: x,
+     y: y,
+     z: z,
+     mode:'markers',
+     marker: {
+   		size: 12,
+   		line: {
+   		color: 'rgba(217, 217, 217, 0.14)',
+   		width: 0.5},
+   		opacity: 0.8},
+    },
+];
+
+var layout = {
+  scene:{
+   aspectratio: {
+     x: 1, y: 1, z: 1,
+    },
+   xaxis: {
+    range: [-10, 10],
+  },
+   yaxis: {
+    range: [-10, 10],
+  },
+   zaxis: {
+   range: [-10, 10],
+  }},
+  transition: {
+      duration: 0
+    },
+  backgroundcolor: 'rgb(230, 200,230)',
+
+};
+
+
+Plotly.newPlot('graph3D', data, layout);
+//requestAnimationFrame(update3D);
+
+// Fonction affichage 2D
+Plotly.plot('graph2D', data2D,layout2D);
+
+
+function pointToArray(point) {
+var array = point.slice(1,point.length-1).split(',');
+var arrayFloat = [];
+for(var i = 0; i < array.length; i++) {
+  arrayFloat.push(parseFloat(array[i]));
+}
+return arrayFloat;
+}
+
+//Socket Communication
+//On crée le socket client sur la loopback au port 5678
+//var ws = new WebSocket("ws://127.0.0.1:5678/");
+var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+var iterateMessage = 0;
+var nbParticule = 0;
+var tab = [];
+var acc2D = 0;
+var acc3D = 0;
+
+socket.on('data_cpp', function (data1, data2, data3) {
+    console.log("pouet");
+    var xyz = [data1, data2, data3];
+    if (iterateMessage == 0) {
+        nbParticule = xyz[0];
+        iterateMessage++;
+        console.log("Ici");
+        console.log(nbParticule);
+    } else {
+        tab.push(xyz);
+
+        function compute(tab,nbParticule,acc) {
+            var longueurTab = tab.length;
+            var i = 0;
+            for(var j = acc; (j < acc + nbParticule) && (acc < longueurTab); j++){
+                if(i < nbParticule) {
+                    x[i] = tab[j][0];
+                    y[i] = tab[j][1];
+                    z[i] = tab[j][2];
+                    i += 1;
+                }
+            }
+        }
+
+        function update2D() {
+            compute(tab,nbParticule,acc2D)
+            var longueurTab = tab.length;
+
+            Plotly.animate('graph2D', {
+                data: [{x: x, y: y, z: z}]
+            }, {
+                transition: {
+                    duration: 0
+                },
+                frame: {
+                    duration: 0,
+                redraw: false
+                }
+            });
+
+            acc2D += nbParticule;
+            if(acc2D < longueurTab) {
+                requestAnimationFrame(update2D);
+            }
+        }
+
+        function update3D () {
+            compute(tab,nbParticule,acc3D);
+            var longueurTab = tab.length;
+            Plotly.animate('graph3D', {
+                data: [{x: x,y: y, z: z}]
+            }, {
+                transition: {
+                    duration: 0
+                },
+                frame: {
+                    duration: 0.5,
+                    redraw: false
+                }
+            });
+            acc3D += nbParticule
+            if (acc3D < longueurTab) {
+                requestAnimationFrame(update3D);
+            }
+        }
+
+        iterateMessage += 1;
+        if (iterateMessage == nbParticule * 10){
+            requestAnimationFrame(update2D);
+            requestAnimationFrame(update3D);
+        }
+    }
+})
+
+
+
+</script>
+
+
+
+</html>
